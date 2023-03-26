@@ -49,7 +49,7 @@ def get_noisy_version(x,p=0.1):
     save_index = list(np.random.permutation(N))[:int(N*(1-p))]
     return x[save_index] 
 
-train_pair, dev_pair, adj_matrix, r_index, r_val, adj_features, rel_features,rwr_features,rel_adj_matrix, tools,log_sparse_rel_matrix,adj_p_1, adj_p_2 = load_data("/data/user/wyy/NSEA/data/D_W_15_V2/",train_ratio=0.01)
+train_pair, dev_pair, adj_matrix, r_index, r_val, adj_features, rel_features,rwr_features,rel_adj_matrix, tools,log_sparse_rel_matrix,adj_p_1, adj_p_2 = load_data("./data/D_W_15_V2/",train_ratio=0.01)
 print(len(train_pair))
 print(np.vstack((train_pair,dev_pair)).shape)
 adj_matrix = np.stack(adj_matrix.nonzero(), axis=1)
