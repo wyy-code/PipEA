@@ -369,9 +369,9 @@ for turn in range(1):
 
             sims = sims[dev_pair[:,0]*0.5][:,(dev_pair[:,1]-1)*0.5]
             sims = sims.numpy()
-            # print(sims.shape)
-            # print("------------------------------------")
-            # print("Begin test align ...")
+            print(sims.shape)
+            print("------------------------------------")
+            print("Begin test align ...")
                 
 
             sims = np.exp(sims*50)
