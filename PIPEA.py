@@ -97,6 +97,7 @@ def get_all_embedding():
     return vec
 
 
+
 class TokenEmbedding(keras.layers.Embedding):
     """Embedding layer with weights returned."""
 
