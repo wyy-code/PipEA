@@ -9,6 +9,7 @@ import tensorflow as tf
 import tensorly
 
 
+
 def computeP4svd(prob, threshold=1e-5, niter=8,alpha=0.5):
     hi = tf.eye(prob.shape[0], dtype="float32")
     prx_mat = hi * alpha
@@ -119,15 +120,6 @@ def remake_adj_1(pair, adj):
     adj = np.delete(adj,tail,axis=1)
     return adj
 
-def remake_adj_2(pair, adj):
-    head = []
-    tail = []
-    for h,t in pair:
-        head.append(int(h/2))
-        tail.append(int((t-1)/2))
-    adj = np.delete(adj,tail,axis=0)
-    adj = np.delete(adj,head,axis=1)
-    return adj
 
 def train_sims(pair, sims):
     for h,t in pair:
