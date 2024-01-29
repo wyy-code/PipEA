@@ -33,10 +33,12 @@ features = np.load('feature.npy')
 candidates_x, candidates_y = set([x for x, y in dev_pair]), set([y for x, y in dev_pair])
 left, right = list(candidates_x), list(candidates_y)
 
-sims = tf.math.maximum(0,sklearn.metrics.pairwise.cosine_similarity(features[::2,], features[1::2,])).numpy()
+sims = tf.matmul(features[::2,],tf.transpose(features[1::2,],[1,0])).numpy()
+# sims = tf.math.maximum(0,sklearn.metrics.pairwise.cosine_similarity(features[::2,], features[1::2,])).numpy()
 P = compute_P(adj_p_1, adj_p_2, sims, alpha=0.7,k=2)
 p_features = computeP4svd(P,threshold=1e-5,alpha=0.5)
 
+print("Begin test")
 right_list, wrong_list = test(dev_pair, features, top_k)
 # E1 = features[::2,]
 # E2 = features[1::2,]
