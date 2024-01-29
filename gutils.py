@@ -7,8 +7,9 @@ import math
 import torch
 import tensorflow as tf
 import tensorly
+from sklearn.decomposition import TruncatedSVD
 
-
+tensorly.set_backend('tensorflow')
 
 def computeP4svd(prob, threshold=1e-5, niter=8,alpha=0.5):
     hi = tf.eye(prob.shape[0], dtype="float32")
@@ -19,13 +20,11 @@ def computeP4svd(prob, threshold=1e-5, niter=8,alpha=0.5):
         prx_mat += hi * alpha
         print(f"before SVD iter{i}")
     prx_mat /= threshold
-    prx_mat[prx_mat < 1] = 1.
-    # prx_mat_log = torch.from_numpy(prx_mat)
-    prx_mat = torch.from_numpy(prx_mat)
-    prx_mat_log = prx_mat.log().to_sparse().requires_grad_(False)
-    # U, V = simple_randomized_torch_svd(prx_mat_log, 128)
-    print("begin torch SVD...")
-    U, sigma, _ = tensorly.truncated_svd(prx_mat_log, n_eigenvecs=512)
+    prx_mat = tf.where(prx_mat<1, tf.ones_like(prx_mat), prx_mat)
+
+    prx_mat_log = tf.math.log(prx_mat)
+    print("begin truncated SVD...")
+    U, sigma, _ = tensorly.truncated_svd(prx_mat_log, n_eigenvecs=128)
     # U, sigma, V = torch.svd_lowrank(prx_mat_log, q=128)
     U = U @ (sigma.pow(0.5).diag())
 
@@ -64,6 +63,7 @@ def compute_P(adj_1, adj_2, sims, alpha=0.5, k=5):
     return tf.sparse.concat(axis=0, sp_inputs=[adj_1, adj_2])
 
 def sparse_top_k(sim, k):
+
    # numpy matrix convert to tensorflow
    sim_tensor = tf.constant(sim, dtype=tf.float32)
 
@@ -81,6 +81,8 @@ def sparse_top_k(sim, k):
 
    # utilize bool mask to the original matrix
    result = tf.where(mask, sim_tensor, tf.zeros_like(sim_tensor))
+
+   result = tf.nn.l2_normalize(result, axis=-1)
 
    # convert to sparse matrix
    sparse_matrix = tf.sparse.from_dense(result)
