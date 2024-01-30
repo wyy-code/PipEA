@@ -5,15 +5,20 @@ import tensorflow as tf
 import os
 import multiprocessing
 import networkx as nx
-from sklearn.metrics.pairwise import cosine_similarity, manhattan_distances
+from sklearn.metrics.pairwise import cosine_similarity, manhattan_distances,euclidean_distances
+from scipy.spatial import distance
 
 import keras.backend as K
-import faiss
+
+from gutils import compute_adj_p, get_adj_p_matrix, computeP4svd #####
 
 import numba as nb
 import numpy as np
 import os
+import time
+import multiprocessing
 import tensorflow as tf
+import math
 import random
 
 
@@ -65,102 +70,42 @@ def load_aligned_pair(file_path,ratio = 0.3):
     np.random.shuffle(aligned)
     return aligned[:int(len(aligned) * ratio)], aligned[int(len(aligned) * ratio):]
 
-# def test(sims,mode = "sinkhorn",batch_size = 1024):
-#
-#     if mode == "sinkhorn":
-#         results = []
-#         for epoch in range(len(sims) // batch_size + 1):
-#             sim = sims[epoch*batch_size:(epoch+1)*batch_size]
-#             rank = np.argsort(-sim,axis=-1)
-#             ans_rank = np.array([i for i in range(epoch * batch_size,min((epoch+1) * batch_size,len(sims)))])
-#             tmp=np.equal(rank.astype(ans_rank.dtype),  np.tile(np.expand_dims(ans_rank,axis=1),[1,len(sims)]))
-#             tmp = tf.cast(tmp,"int32")
-#             tmp = tf.where(tmp)
-#             tmp = tf.Session().run(tmp)
-#             results.append(tmp)
-#
-#         results = np.concatenate(results,axis=0)
-#
-#         @nb.jit(nopython = True)
-#         def cal(results):
-#             hits1,hits5,hits10,mrr = 0,0,0,0
-#             for x in results[:,1]:
-#                 if x < 1:
-#                     hits1 += 1
-#                 if x<5:
-#                     hits5 += 1
-#                 if x < 10:
-#                     hits10 += 1
-#                 mrr += 1/(x + 1)
-#             return hits1,hits5,hits10,mrr
-#         hits1,hits5,hits10,mrr = cal(results)
-#         print("hits@1 : %.2f%% hits@5 : %.2f%% hits@10 : %.2f%% MRR : %.2f%%" % (hits1/len(sims)*100,hits5/len(sims)*100, hits10/len(sims)*100,mrr/len(sims)*100))
-#     else:
-#         c = 0
-#         for i,j in enumerate(sims[1]):
-#             if i == j:
-#                 c += 1
-#         print("hits@1 : %.2f%%"%(100 * c/len(sims[0])))
-
-def sparse_sinkhorn_sims(left, right, features, top_k=500, iteration=15, mode="test"):
-    features_l = features[left]
-    features_r = features[right]
-
-    faiss.normalize_L2(features_l);
-    faiss.normalize_L2(features_r)
-
-    dim, measure = features_l.shape[1], faiss.METRIC_INNER_PRODUCT
-    if mode == "test":
-        param = 'Flat'
-        index = faiss.index_factory(dim, param, measure)
+def test(sims,mode = "sinkhorn",batch_size = 1024):
+    
+    if mode == "sinkhorn":
+        results = []
+        for epoch in range(len(sims) // batch_size + 1):
+            sim = sims[epoch*batch_size:(epoch+1)*batch_size]
+            rank = np.argsort(-sim,axis=-1)
+            ans_rank = np.array([i for i in range(epoch * batch_size,min((epoch+1) * batch_size,len(sims)))])
+            tmp=np.equal(rank.astype(ans_rank.dtype),  np.tile(np.expand_dims(ans_rank,axis=1),[1,len(sims)]))
+            tmp = tf.cast(tmp,"int32")
+            tmp = tf.where(tmp)
+            tmp = tf.Session().run(tmp)
+            results.append(tmp)
+  
+        results = np.concatenate(results,axis=0)
+        
+        @nb.jit(nopython = True)
+        def cal(results):
+            hits1,hits5,hits10,mrr = 0,0,0,0
+            for x in results[:,1]:
+                if x < 1:
+                    hits1 += 1
+                if x<5:
+                    hits5 += 1
+                if x < 10:
+                    hits10 += 1
+                mrr += 1/(x + 1)
+            return hits1,hits5,hits10,mrr
+        hits1,hits5,hits10,mrr = cal(results)
+        print("hits@1 : %.2f%% hits@5 : %.2f%% hits@10 : %.2f%% MRR : %.2f%%" % (hits1/len(sims)*100,hits5/len(sims)*100, hits10/len(sims)*100,mrr/len(sims)*100))
     else:
-        param = 'IVF256(RCQ2x5),PQ32'
-        index = faiss.index_factory(dim, param, measure)
-        index.nprobe = 16
-
-    index.train(features_r)
-    index.add(features_r)
-    sims, index = index.search(features_l, top_k)
-
-    row_sims = K.exp(sims.flatten() / 0.02)
-    index = K.flatten(index.astype("int32"))
-
-    size = len(left)
-    row_index = K.transpose(([K.arange(size * top_k) // top_k, index, K.arange(size * top_k)]))
-    col_index = tf.gather(row_index, tf.argsort(row_index[:, 1]))
-    covert_idx = tf.argsort(col_index[:, 2])
-
-    for _ in range(iteration):
-        row_sims = row_sims / tf.gather(indices=row_index[:, 0], params=tf.math.segment_sum(row_sims, row_index[:, 0]))
-        col_sims = tf.gather(row_sims, col_index[:, 2])
-        col_sims = col_sims / tf.gather(indices=col_index[:, 1], params=tf.math.segment_sum(col_sims, col_index[:, 1]))
-        row_sims = tf.gather(col_sims, covert_idx)
-
-    return K.reshape(row_index[:, 1], (-1, top_k)), K.reshape(row_sims, (-1, top_k))
-def test(test_pair, features, top_k=500, iteration=15):
-    left, right = test_pair[:, 0], np.unique(test_pair[:, 1])
-    index, sims = sparse_sinkhorn_sims(left, right, features, top_k, iteration, "test")
-    ranks = tf.argsort(-sims, -1).numpy()
-    index = index.numpy()
-
-    wrong_list, right_list = [], []
-    h1, h10, mrr = 0, 0, 0
-    pos = np.zeros(np.max(right) + 1)
-    pos[right] = np.arange(len(right))
-    for i in range(len(test_pair)):
-        rank = np.where(pos[test_pair[i, 1]] == index[i, ranks[i]])[0]
-        if len(rank) != 0:
-            if rank[0] == 0:
-                h1 += 1
-                right_list.append(test_pair[i])
-            else:
-                wrong_list.append((test_pair[i], right[index[i, ranks[i]][0]]))
-            if rank[0] < 10:
-                h10 += 1
-            mrr += 1 / (rank[0] + 1)
-    print("Hits@1: %.3f Hits@10: %.3f MRR: %.3f\n" % (h1 / len(test_pair), h10 / len(test_pair), mrr / len(test_pair)))
-
-    return right_list, wrong_list
+        c = 0
+        for i,j in enumerate(sims[1]):
+            if i == j:
+                c += 1
+        print("hits@1 : %.2f%%"%(100 * c/len(sims[0])))
 
 def normalize_adj(adj):
     adj = sp.coo_matrix(adj)
@@ -553,28 +498,7 @@ def get_log_sparse_rel_matrix(all_triples, node_size):
     sparse_rel_matrix = tf.cast(sparse_rel_matrix, tf.float32)
     return sparse_rel_matrix
     
-def get_adj_p_matrix(triples, entity, rel):
-    if triples[0][0]%2 == 0:
-        ent_size = int(max(entity)/2 + 1)
-        adj_p = sp.lil_matrix((ent_size, ent_size))
-        for h, r, t in triples:
-            # adj_matrix[h, t] = 1;
-            # adj_matrix[t, h] = 1;
-            adj_p[h/2, t/2] = 1;
-            adj_p[t/2, h/2] = 1;
-    else:
-        ent_size = int((max(entity)-1)/2 + 1)
-        adj_p = sp.lil_matrix((ent_size, ent_size))
-        for h, r, t in triples:
-            # adj_matrix[h, t] = 1;
-            # adj_matrix[t, h] = 1;
-            adj_p[(h-1)/2, (t-1)/2] = 1;
-            adj_p[(t-1)/2, (h-1)/2] = 1;
-    #adj_matrix = sp.lil_matrix((ent_size, ent_size))
-
-    adj_p = normalize_adj(adj_p)
-    return adj_p
-
+    
 def load_data(lang, train_ratio=0.3):
     entity1, rel1, triples1 = load_triples(lang + 'triples_1')
     entity2, rel2, triples2 = load_triples(lang + 'triples_2')
@@ -660,8 +584,8 @@ def load_data(lang, train_ratio=0.3):
     # rwr_feature[nodes1] = rwr_1
     # rwr_feature[nodes2] = rwr_2
     # np.save(lang+"rwr_feature_{}.npy".format(train_ratio),rwr_feature)
-    # adj_p_1 = adj_p_1
-    # adj_p_2 = adj_p_2
+    adj_p_1 = adj_p_1.todense()
+    adj_p_2 = adj_p_2.todense()
     print("save done")
  
     return np.array(train_pair), np.array(dev_pair), adj_matrix, np.array(r_index), np.array(
