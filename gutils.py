@@ -223,7 +223,7 @@ def reshape_P(P):
 
     return new_p
 
-def refina(a1, a2, M, k=8):
+def refina(a1, a2, M, train_pair=None ,k=8):
     a1, a2 = torch.tensor(a1, dtype=torch.float32).to_sparse().requires_grad_(False), torch.tensor(a2,dtype=torch.float32).to_sparse().requires_grad_(False)
     print(a1.dtype,a2.dtype,M.dtype)
     M = torch.tensor(M, dtype=torch.float32)
@@ -232,6 +232,7 @@ def refina(a1, a2, M, k=8):
         M = M + 1e-5
         M = torch.nn.functional.normalize(M, p=2, dim=1)
         M = torch.nn.functional.normalize(M, p=2, dim=0)
+        M = train_sims(pair, M)
         print("Refina in iter {}".format(i))
     return M
 
