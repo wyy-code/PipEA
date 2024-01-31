@@ -351,16 +351,12 @@ for turn in range(1):
             p_features = reshape_P(p_features)
             p_features = p_features / (np.linalg.norm(p_features, axis=-1, keepdims=True) + 1e-12)
 
-            sims = cal_sims(dev_pair,nf) 
-            sims_p = cal_sims(dev_pair,p_features)
             print("Calculate sims")
-            sims = np.maximum(0, sklearn.metrics.pairwise.cosine_similarity(E1, E2))
-            sims_p = np.maximum(0, sklearn.metrics.pairwise.cosine_similarity(p_features[::2,], p_features[1::2,]))
-
-
-            sims = torch.tensor(sims)
-            sims_p = torch.tensor(sims_p)
-            sims = torch.mul(sims, sims_p)
+            sims = tf.matmul(E1,tf.transpose(E2,[1,0]))
+            sims_p = tf.matmul(p_features[::2,],tf.transpose(p_features[1::2,],[1,0]))
+            sims = tf.multiply(sims, sims_p)
+            sims = tf.Session().run(sims)
+         
             print(adj_p_1.shape)
             print(adj_p_2.shape)
             sims = train_sims(train_pair, sims)
