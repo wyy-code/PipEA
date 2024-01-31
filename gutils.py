@@ -51,7 +51,7 @@ def computeP4svd(prob, hi, threshold=1e-5, niter=8,alpha=0.5):
     prx_mat_log = prx_mat.log().to_sparse().requires_grad_(False)
     # U, V = simple_randomized_torch_svd(prx_mat_log, 128)
     print("begin torch SVD...")
-    U, sigma, V = torch.svd_lowrank(prx_mat_log, q=128)
+    U, sigma, V = torch.svd_lowrank(prx_mat_log, q=prx_mat.shape[0]*0.01)
     U = U @ (sigma.pow(0.5).diag())
 
     return U.numpy()
