@@ -236,18 +236,29 @@ def refina(a1, a2, M, train_pair=None ,k=8):
         print("Refina in iter {}".format(i))
     return M
 
-def refina_sparse(a1, a2, M, k=8):
-    a1, a2 = torch.tensor(a1, dtype=torch.float32).to_sparse().requires_grad_(False), torch.tensor(a2,dtype=torch.float32).to_sparse().requires_grad_(False)
+def csr_to_torch_sparse(csr_matrix):
+    csr_matrix = csr_matrix.tocoo()
+    values = csr_matrix.data
+    indices = np.vstack((csr_matrix.row, csr_matrix.col))
+
+    i = torch.LongTensor(indices)
+    v = torch.FloatTensor(values)
+    shape = csr_matrix.shape
+
+    return torch.sparse_coo_tensor(i, v, torch.Size(shape)).requires_grad_(False)
+
+def refina_batch(a1, a2, M, k=8, batch_size=500):
+    a1, a2 = csr_to_torch_sparse(a1), csr_to_torch_sparse(a2)
     print(a1.dtype,a2.dtype,M.dtype)
-    # M = torch.tensor(M, dtype=torch.float32)
-    M = top_k_matrix_sparse(M, 20)
+    M = torch.tensor(M, dtype=torch.float32)
+
     for i in range(k):
         M = torch.mul(M.requires_grad_(False), torch.sparse.mm(torch.sparse.mm(a1,M).to_sparse(),a2).to_dense())
         M = M + 1e-5
         M = torch.nn.functional.normalize(M, p=2, dim=1)
         M = torch.nn.functional.normalize(M, p=2, dim=0)
-        M = top_k_matrix_sparse(M, 64)
         print("Refina in iter {}".format(i))
+
     return M
 
 def remake_adj_1(pair, adj):
