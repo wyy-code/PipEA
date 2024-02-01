@@ -498,6 +498,32 @@ def get_log_sparse_rel_matrix(all_triples, node_size):
     sparse_rel_matrix = tf.cast(sparse_rel_matrix, tf.float32)
     return sparse_rel_matrix
     
+def load_data_deal(lang, train_ratio=0.3):
+    entity1, rel1, triples1 = load_triples(lang + 'triples_1')
+    entity2, rel2, triples2 = load_triples(lang + 'triples_2')
+
+    alignment_pair = load_alignment_pair(lang + 'ref_ent_ids')
+    np.random.shuffle(alignment_pair)
+    train_pair, dev_pair = alignment_pair[0:int(len(alignment_pair) * train_ratio)], alignment_pair[int(
+        len(alignment_pair) * train_ratio):]
+
+
+    if os.path.exists(lang + "adj_p_1_{}.npz".format(train_ratio)) and \
+            os.path.exists(lang + "adj_p_2_{}.npz".format(train_ratio)):
+        adj_p_1 = sp.load_npz(lang + "adj_p_1_{}.npz".format(train_ratio))
+        adj_p_2 = sp.load_npz(lang + "adj_p_2_{}.npz".format(train_ratio))
+
+    else:
+        adj_p_1 = get_adj_p_matrix(triples1, entity1, rel1)  #####
+        adj_p_2 = get_adj_p_matrix(triples2, entity2, rel2)  #####
+        sp.save_npz(lang + "adj_p_1_{}.npz".format(train_ratio), adj_p_1)
+        sp.save_npz(lang + "adj_p_2_{}.npz".format(train_ratio), adj_p_2)
+
+    adj_p_1 = adj_p_1
+    adj_p_2 = adj_p_2
+    print("save done")
+
+    return np.array(train_pair), np.array(dev_pair), adj_p_1, adj_p_2
     
 def load_data(lang, train_ratio=0.3):
     entity1, rel1, triples1 = load_triples(lang + 'triples_1')
