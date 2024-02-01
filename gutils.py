@@ -252,7 +252,7 @@ def refina_batch(a1, a2, M, k=8, batch_size=5000):
     print(a1.dtype,a2.dtype,M.dtype)
     M = torch.tensor(M, dtype=torch.float32).requires_grad_(False)
 
-    # numer of batch iterations (colum)
+    # 计算批处理的次数（列方向）
     n_batches = M.size(1) // batch_size
     if M.size(1) % batch_size != 0:
         n_batches += 1
@@ -263,17 +263,16 @@ def refina_batch(a1, a2, M, k=8, batch_size=5000):
             start_idx = b * batch_size
             end_idx = min((b + 1) * batch_size, M.size(1))
 
-            # excute every batch
+            # 处理每个批次
             AMA = torch.sparse.mm(a1, M).to_sparse();
             AMA = torch.mm(AMA, a2[:, start_idx:end_idx])
             M = torch.mul(M[:, start_idx:end_idx].requires_grad_(False), AMA)
             M += 1e-5
-            M = torch.nn.functional.normalize(M, p=2, dim=1)
-            M = torch.nn.functional.normalize(M, p=2, dim=0)
-
             M_new[:, start_idx:end_idx] = M
 
         M = M_new
+        M = torch.nn.functional.normalize(M, p=2, dim=1)
+        M = torch.nn.functional.normalize(M, p=2, dim=0)
         print("Refina in iter {}".format(i))
 
     return M
