@@ -247,16 +247,33 @@ def csr_to_torch_sparse(csr_matrix):
 
     return torch.sparse_coo_tensor(i, v, torch.Size(shape)).requires_grad_(False)
 
-def refina_batch(a1, a2, M, k=8, batch_size=500):
-    a1, a2 = csr_to_torch_sparse(a1), csr_to_torch_sparse(a2)
+def refina_batch(a1, a2, M, k=8, batch_size=5000):
+    a1, a2 = csr_to_torch_sparse(a1), csr_to_torch_sparse(a2).to_dense()
     print(a1.dtype,a2.dtype,M.dtype)
-    M = torch.tensor(M, dtype=torch.float32)
+    M = torch.tensor(M, dtype=torch.float32).requires_grad_(False)
+
+    # numer of batch iterations (colum)
+    n_batches = M.size(1) // batch_size
+    if M.size(1) % batch_size != 0:
+        n_batches += 1
 
     for i in range(k):
-        M = torch.mul(M.requires_grad_(False), torch.sparse.mm(torch.sparse.mm(a1,M).to_sparse(),a2).to_dense())
-        M = M + 1e-5
-        M = torch.nn.functional.normalize(M, p=2, dim=1)
-        M = torch.nn.functional.normalize(M, p=2, dim=0)
+        M_new = torch.zeros_like(M)
+        for b in range(n_batches):
+            start_idx = b * batch_size
+            end_idx = min((b + 1) * batch_size, M.size(1))
+
+            # excute every batch
+            AMA = torch.sparse.mm(a1, M).to_sparse();
+            AMA = torch.mm(AMA, a2[:, start_idx:end_idx])
+            M = torch.mul(M[:, start_idx:end_idx].requires_grad_(False), AMA)
+            M += 1e-5
+            M = torch.nn.functional.normalize(M, p=2, dim=1)
+            M = torch.nn.functional.normalize(M, p=2, dim=0)
+
+            M_new[:, start_idx:end_idx] = M
+
+        M = M_new
         print("Refina in iter {}".format(i))
 
     return M
