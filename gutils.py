@@ -11,7 +11,8 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 import heapq
 import sys
-import torch.nn.functional as F
+import tensorflow.keras.backend as K
+
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -235,6 +236,48 @@ def refina(a1, a2, M, train_pair=None ,k=8):
         M = train_sims(pair, M)
         print("Refina in iter {}".format(i))
     return M
+
+def convert_scipy_to_tf_sparsetensor(matrix):
+    data = matrix.data.astype('float32')
+    row = matrix.nonzero()[0]
+    col = matrix.nonzero()[1]
+    indices = np.vstack((row,col)).T
+
+    return tf.SparseTensor(indices=indices, values=data, dense_shape=matrix.shape)
+
+def batch_sparse_matmul(sparse_tensor,dense_tensor,batch_size = 1000,save_mem = False):
+    results = []
+    for i in range(dense_tensor.shape[-1]//batch_size + 1):
+        temp_result = tf.sparse.sparse_dense_matmul(sparse_tensor,dense_tensor[:, i*batch_size:(i+1)*batch_size])
+        if save_mem:
+            temp_result = temp_result.numpy()
+        results.append(temp_result)
+    if save_mem:
+        return np.concatenate(results,-1)
+    else:
+        return K.concatenate(results,-1)
+
+def refina_tf_batch(a1, a2, M, k=8, batch_size=5000):
+    a1, a2 = convert_scipy_to_tf_sparsetensor(a1), a2.todense()
+    a2 = tf.cast(a2, "float32")
+    print(a1.dtype, a2.dtype, M.dtype)
+
+    for i in range(k):
+        AMA = batch_sparse_matmul(a1,M)
+        print(AMA.shape)
+        AMA= tf.sparse.from_dense(AMA)
+        print(AMA.shape)
+        AMA = batch_sparse_matmul(AMA, a2)
+        print(AMA.shape)
+        M = tf.multiply(M, AMA)
+        print(f"M shape is {print(AMA.shape)}")
+        M += 1e-5
+        M = K.l2_normalize(M,-1)
+        M = K.l2_normalize(M, 0)
+        print("Refina in iter {}".format(i))
+
+    return M
+
 
 def csr_to_torch_sparse(csr_matrix):
     csr_matrix = csr_matrix.tocoo()
