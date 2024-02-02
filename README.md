@@ -18,6 +18,6 @@ The environment is provided in requirements.txt.
 
 ## Large scale Dataset
 
-We also provide sparse strategy for 100K and larger datasets. The main code is based on " refina_tf_batch " in gutils.py. If you want to apply PipEA on large-scale KG, you can modify and run test.py
+We also provide sparse strategy for 100K and larger datasets. If you want to apply PipEA on large-scale KG, you can modify and run test.py
 
 Notably, the application on the large-scale KG need tf 2.x, which is different from original environment.
