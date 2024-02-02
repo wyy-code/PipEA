@@ -60,7 +60,7 @@ del sims_p
 
 # ###### Refine Strategy
 # sims = refina_batch(adj_p_1, adj_p_2, sims, k=8)
-sims = refina_tf_batch(adj_p_1, adj_p_2, sims, k=10).numpy()
+sims = refina_tf_batch(adj_p_1, adj_p_2, sims, train_pair, k=20).numpy()
 
 sims = sims[(dev_pair[:, 0] * 0.5).astype('int')][:, ((dev_pair[:, 1] - 1) * 0.5).astype('int')]
 # sims = sims.numpy()
