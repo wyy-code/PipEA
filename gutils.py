@@ -283,7 +283,7 @@ def reshape_P(P):
 
     return new_p
 
-def refina(a1, a2, M, k=8):
+def refina(a1, a2, M, train_pair, k=8):
     a1, a2 = torch.tensor(a1, dtype=torch.float32).to_sparse().requires_grad_(False), torch.tensor(a2,dtype=torch.float32).to_sparse().requires_grad_(False)
     print(a1.dtype,a2.dtype,M.dtype)
     M = torch.tensor(M, dtype=torch.float32)
@@ -292,6 +292,7 @@ def refina(a1, a2, M, k=8):
         M = M + 1e-5
         M = torch.nn.functional.normalize(M, p=2, dim=1)
         M = torch.nn.functional.normalize(M, p=2, dim=0)
+        M = train_sims(train_pair, M)
         print("Refina in iter {}".format(i))
     return M
 
@@ -349,7 +350,7 @@ def batch_sparse_matmul(sparse_tensor,dense_tensor,batch_size = 1000,save_mem = 
     else:
         return K.concatenate(results,-1)
 
-def refina_tf_batch(a1, a2, M, k=8, batch_size=5000):
+def refina_tf_batch(a1, a2, M, train_pair, k=8, batch_size=5000):
     a1, a2 = convert_scipy_to_tf_sparsetensor(a1), a2.todense()
     a2 = tf.cast(a2, "float32")
     print(a1.dtype, a2.dtype, M.dtype)
@@ -362,6 +363,7 @@ def refina_tf_batch(a1, a2, M, k=8, batch_size=5000):
         M += 1e-5
         M = K.l2_normalize(M,-1)
         M = K.l2_normalize(M, 0)
+        M = train_sims(train_pair, M)
         print("Refina in iter {}".format(i))
 
     return M
