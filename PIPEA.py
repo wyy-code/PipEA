@@ -359,7 +359,7 @@ for turn in range(1):
          
             print(adj_p_1.shape)
             print(adj_p_2.shape)
-            sims = refina(adj_p_1, adj_p_2, sims, train_pair=train_pair, k=8) 
+            sims = refina(adj_p_1, adj_p_2, sims, train_pair, k=8) 
 
             sims = sims[dev_pair[:,0]*0.5][:,(dev_pair[:,1]-1)*0.5]
             sims = sims.numpy()
