@@ -25,6 +25,6 @@ You can also apply 15K datasets based on the test.py, which only needs to genera
 Notably, the application on the large-scale KG need tf 2.x, which is different from original environment.
 
 Our large scale environment is:
-* tensorly
+* fbpca
 * tensorflow == 2.4.1
 * Python == 3.6.5
