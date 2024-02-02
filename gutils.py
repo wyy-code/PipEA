@@ -4,6 +4,7 @@ import scipy.sparse as sp
 import torch
 import tensorflow as tf
 import tensorflow.keras.backend as K
+import fbpca
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -48,6 +49,26 @@ def computeP4svd(prob, hi, threshold=1e-5, niter=8,alpha=0.5):
 
     return U.numpy()
 
+def computeP4_tf_svd(prob, threshold=1e-5, niter=8,alpha=0.5):
+    hi = tf.eye(prob.shape[0], dtype="float32")
+    prx_mat = hi * alpha
+    print("begin SVD iter...")
+    for i in range(niter):
+        hi = tf.sparse.sparse_dense_matmul(prob, hi) * (1 - alpha)
+        prx_mat += hi * alpha
+        print(f"before SVD iter{i}")
+
+    prx_mat /= threshold
+    prx_mat = tf.where(prx_mat<1, tf.ones_like(prx_mat), prx_mat)
+
+    prx_mat_log = tf.math.log(prx_mat).numpy()
+    print("begin truncated SVD...")
+    # U,S,V = tensorly.truncated_svd(prx_mat_log, n_eigenvecs=128)
+    U, S, _ = fbpca.pca(prx_mat_log, k=128)
+    U = U @ np.diag(np.sqrt(S))
+    # U = U @ (S.pow(0.5).diag())
+
+    return U
 
 def load_triples(file_name):
     triples = []
@@ -249,7 +270,7 @@ def compute_tf_P(adj_1, adj_2, sims, alpha=0.5, k=1):
     adj_2 = tf.sparse.concat(axis=-1, sp_inputs=[cos_21, adj_2])
 
     P = tf.sparse.concat(axis=0, sp_inputs=[adj_1, adj_2])
-    P = tf_sparse_to_csr(P)
+    # P = tf_sparse_to_csr(P)
 
     return P
 
@@ -338,7 +359,6 @@ def refina_tf_batch(a1, a2, M, k=8, batch_size=5000):
         AMA = tf.matmul(AMA, a2)
         print(AMA.shape)
         M = tf.math.multiply(M, AMA)
-        print(f"M shape is {AMA.shape}")
         M += 1e-5
         M = K.l2_normalize(M,-1)
         M = K.l2_normalize(M, 0)
@@ -384,25 +404,6 @@ def refina_batch(a1, a2, M, k=8, batch_size=5000):
     return M
 
 
-def remake_adj_1(pair, adj):
-    head = []
-    tail = []
-    for h,t in pair:
-        head.append(int(h/2))
-        tail.append(int((t-1)/2))
-    adj = np.delete(adj,head,axis=0)
-    adj = np.delete(adj,tail,axis=1)
-    return adj
-
-def remake_adj_2(pair, adj):
-    head = []
-    tail = []
-    for h,t in pair:
-        head.append(int(h/2))
-        tail.append(int((t-1)/2))
-    adj = np.delete(adj,tail,axis=0)
-    adj = np.delete(adj,head,axis=1)
-    return adj
 
 def train_sims(pair, sims):
     for h,t in pair:
