@@ -9,7 +9,7 @@ import os
 import numpy as np
 from utils import *
 from tqdm import *
-from gutils import refina_batch, refina_tf_batch, refina
+from gutils import refina_batch, refina_tf_batch, refina, compute_P, reshape_P, compute_tf_P, computeP4_tf_svd
 import torch
 import numpy as np
 
@@ -32,18 +32,35 @@ features = features / (np.linalg.norm(features, axis=-1, keepdims=True) + 1e-5)
 # sims = torch.matmul(features[::2, ], features[1::2, ].transpose(1, 0)).numpy()
 sims = tf.matmul(features[::2, ],tf.transpose(features[1::2, ],[1,0])).numpy()
 
+# adj_p_1 = adj_p_1.todense()
+# adj_p_2 = adj_p_2.todense()
+# P = compute_P(adj_p_1, adj_p_2, features[::2,], features[1::2,], alpha=0.7,k=2)
+P = compute_tf_P(adj_p_1, adj_p_2, sims, alpha=0.7,k=2)
+
 del features
 
 print(adj_p_1.shape)
 print(adj_p_2.shape)
+
+# ###### Propagation Strategy
+
+p_r = P.shape[0]
+identity = sp.identity(p_r,dtype="float32")
+# p_features = computeP4svd(P,identity,threshold=1e-5,alpha=0.5)
+p_features = computeP4_tf_svd(P,threshold=1e-5,alpha=0.5)
+p_features = reshape_P(p_features)
+p_features = p_features / (np.linalg.norm(p_features, axis=-1, keepdims=True) + 1e-12)
+
+sims_p = tf.matmul(p_features[::2,],tf.transpose(p_features[1::2,],[1,0]))
+sims_p = tf.cast(sims_p, dtype=tf.float32)
+del p_features, identity
+
+sims = tf.multiply(sims, sims_p)
+del sims_p
+
+# ###### Refine Strategy
 # sims = refina_batch(adj_p_1, adj_p_2, sims, k=8)
-sims = refina_tf_batch(adj_p_1, adj_p_2, sims, k=4).numpy()
-
-# ##torch refina
-# adj_p_1 = adj_p_1.todense()
-# adj_p_2 = adj_p_2.todense()
-# sims = refina(adj_p_1, adj_p_2, sims, k=8).numpy()
-
+sims = refina_tf_batch(adj_p_1, adj_p_2, sims, k=10).numpy()
 
 sims = sims[(dev_pair[:, 0] * 0.5).astype('int')][:, ((dev_pair[:, 1] - 1) * 0.5).astype('int')]
 # sims = sims.numpy()
