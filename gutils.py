@@ -264,13 +264,10 @@ def refina_tf_batch(a1, a2, M, k=8, batch_size=5000):
 
     for i in range(k):
         AMA = batch_sparse_matmul(a1,M)
+        AMA = tf.matmul(AMA, a2)
         print(AMA.shape)
-        AMA= tf.sparse.from_dense(AMA)
-        print(AMA.shape)
-        AMA = batch_sparse_matmul(AMA, a2)
-        print(AMA.shape)
-        M = tf.multiply(M, AMA)
-        print(f"M shape is {print(AMA.shape)}")
+        M = tf.math.multiply(M, AMA)
+        print(f"M shape is {AMA.shape}")
         M += 1e-5
         M = K.l2_normalize(M,-1)
         M = K.l2_normalize(M, 0)
@@ -295,7 +292,6 @@ def refina_batch(a1, a2, M, k=8, batch_size=5000):
     print(a1.dtype,a2.dtype,M.dtype)
     M = torch.tensor(M, dtype=torch.float32).requires_grad_(False)
 
-    # 计算批处理的次数（列方向）
     n_batches = M.size(1) // batch_size
     if M.size(1) % batch_size != 0:
         n_batches += 1
@@ -306,7 +302,6 @@ def refina_batch(a1, a2, M, k=8, batch_size=5000):
             start_idx = b * batch_size
             end_idx = min((b + 1) * batch_size, M.size(1))
 
-            # 处理每个批次
             AMA = torch.sparse.mm(a1, M).to_sparse();
             AMA = torch.mm(AMA, a2[:, start_idx:end_idx])
             M = torch.mul(M[:, start_idx:end_idx].requires_grad_(False), AMA)
