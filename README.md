@@ -16,8 +16,10 @@ The dataset can be unzipped by data.zip in your root.
 
 The environment is provided in requirements.txt.
 
-## Large scale Dataset
+## Update 2024.2.2: Large scale Dataset
 
-We also provide sparse strategy for 100K and larger datasets. If you want to apply PipEA on large-scale KG, you can modify and run test.py
+We also provide faster sparse strategy for 100K and larger datasets. If you want to apply PipEA on large-scale KG, you can modify and run test.py
+
+You can also apply 15K datasets based on the test.py, which only needs to generate embeddings firstly. The test.py will faster than original code.
 
 Notably, the application on the large-scale KG need tf 2.x, which is different from original environment.
