@@ -30,4 +30,4 @@ Our large scale environment is:
 * Python == 3.6.5
 
 ## Acknowledgement
-We appreciate [PEEA](https://github.com/OceanTangWei/PEEA) for their open-source contributions and the enocder hyperparameters are followed their paper.
+We appreciate [PEEA](https://github.com/OceanTangWei/PEEA) for their open-source contributions and the enocder hyperparameters follow their paper.
