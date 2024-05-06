@@ -29,5 +29,3 @@ Our large scale environment is:
 * tensorflow == 2.4.1
 * Python == 3.6.5
 
-## Acknowledgement
-We appreciate [PEEA](https://github.com/OceanTangWei/PEEA) for their contributions and the enocder hyperparameters follow their paper.
