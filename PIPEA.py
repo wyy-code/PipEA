@@ -322,7 +322,7 @@ epoch = 60
 print(len(train_pair), len(dev_pair))
 
 # ## Train the model
-for turn in range(1):
+for turn in range(5):
     for i in trange(epoch):
  
  
@@ -373,3 +373,18 @@ for turn in range(1):
                 sims = sims / np.sum(sims,axis=1,keepdims=True)
                 sims = sims / np.sum(sims,axis=0,keepdims=True)
             test(sims,"sinkhorn")
+         new_pair = []
+    Lvec,Rvec = get_embedding(rest_set_1,rest_set_2)
+    A,B = evaluater.CSLS_cal(Lvec,Rvec,False)
+    for i,j in enumerate(A):
+        if  B[j] == i:
+            new_pair.append([rest_set_1[j],rest_set_2[i]])
+    
+    train_pair = np.concatenate([train_pair,np.array(new_pair)],axis = 0)
+    for e1,e2 in new_pair:
+        if e1 in rest_set_1:
+            rest_set_1.remove(e1) 
+        
+    for e1,e2 in new_pair:
+        if e2 in rest_set_2:
+            rest_set_2.remove(e2)
