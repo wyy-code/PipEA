@@ -363,7 +363,7 @@ def refina_tf_batch(a1, a2, M, train_pair, k=8, batch_size=5000):
         M += 1e-5
         M = K.l2_normalize(M,-1)
         M = K.l2_normalize(M, 0)
-        M = train_sims(train_pair, M)
+        M = train_tf_sims(train_pair, M)
         print("Refina in iter {}".format(i))
 
     return M
@@ -412,6 +412,35 @@ def train_sims(pair, sims):
         sims[int(h/2)] = 0.
         sims[:,int((t-1)/2)] = 0.
         sims[int(h/2),int((t-1)/2)] = 1.
+    return sims
+
+def train_tf_sims(pair, sims):
+    for h, t in pair:
+        h_index = int(h // 2)
+        t_index = int((t - 1) // 2)
+
+        # 使用 tf.tensor_scatter_nd_update 更新特定索引的值
+        # 首先更新 h_index 对应的整行
+        sims = tf.tensor_scatter_nd_update(
+            sims,
+            indices=[[h_index, i] for i in range(sims.shape[1])],
+            updates=tf.zeros(sims.shape[1])
+        )
+
+        # 更新 t_index 对应的整列
+        sims = tf.tensor_scatter_nd_update(
+            sims,
+            indices=[[i, t_index] for i in range(sims.shape[0])],
+            updates=tf.zeros(sims.shape[0])
+        )
+
+        # 更新特定的 (h_index, t_index) 位置
+        sims = tf.tensor_scatter_nd_update(
+            sims,
+            indices=[[h_index, t_index]],
+            updates=[1.0]
+        )
+
     return sims
 
 
