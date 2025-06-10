@@ -1,6 +1,4 @@
 # Potential Isomorphism Propagation Entity Alignment
-Paper for 2024
-
 This is the code of PipEA introduced in our paper, which is based on PEEA encoder.
 
 ## Datasets
