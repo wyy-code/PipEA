@@ -27,3 +27,16 @@ Our large scale environment is:
 * tensorflow == 2.4.1
 * Python == 3.6.5
 
+If you find this repo useful, please cite us:
+```bigquery
+@article{sun2025understanding,
+  title={Understanding and guiding weakly supervised entity alignment with potential isomorphism propagation},
+  author={Sun, Haifeng and Wang, Yuanyi and Li, Han and Tang, Wei and Zhuang, Zirui and Qi, Qi and Wang, Jingyu},
+  journal={ACM Transactions on Knowledge Discovery from Data},
+  volume={19},
+  number={7},
+  pages={1--28},
+  year={2025},
+  publisher={ACM New York, NY}
+}
+```
